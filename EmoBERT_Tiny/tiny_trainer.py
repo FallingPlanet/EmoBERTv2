@@ -53,19 +53,20 @@ class Classifier:
             input_ids, attention_masks, labels = [x.to(self.device) for x in batch]
 
             optimizer.zero_grad()
-            outputs = self.model(input_ids, attention_masks=attention_masks)
-            loss = self.compute_loss(outputs.logits, labels)
+            outputs = self.model(input_ids, attention_masks)
+            loss = self.compute_loss(outputs, labels)
             loss.backward()
             optimizer.step()
+
 
             total_loss += loss.item()
 
             # Update and accumulate metrics
-            total_accuracy += self.accuracy(outputs.logits.argmax(dim=1), labels).item()
-            total_precision += self.precision(outputs.logits.argmax(dim=1), labels).item()
-            total_recall += self.recall(outputs.logits.argmax(dim=1), labels).item()
-            total_f1 += self.f1(outputs.logits, labels).item()
-            total_mcc += self.mcc(outputs.logits.argmax(dim=1), labels).item()
+            total_accuracy += self.accuracy(outputs.argmax(dim=1), labels).item()
+            total_precision += self.precision(outputs.argmax(dim=1), labels).item()
+            total_recall += self.recall(outputs.argmax(dim=1), labels).item()
+            total_f1 += self.f1(outputs, labels).item()
+            total_mcc += self.mcc(outputs.argmax(dim=1), labels).item()
 
             # Update tqdm description with current loss and metrics
             pbar.set_postfix(loss=total_loss / (pbar.n + 1))
@@ -105,17 +106,17 @@ class Classifier:
             for batch in pbar:
                 input_ids, attention_masks, labels = [x.to(self.device) for x in batch]
                 
-                outputs = self.model(input_ids, attention_masks=attention_masks)
-                loss = self.compute_loss(outputs.logits, labels)
+                outputs = self.model(input_ids, attention_masks)
+                loss = self.compute_loss(outputs, labels)
 
                 total_loss += loss.item()
 
                 # Update and accumulate metrics
-                total_accuracy += self.accuracy(outputs.logits.argmax(dim=1), labels).item()
-                total_precision += self.precision(outputs.logits.argmax(dim=1), labels).item()
-                total_recall += self.recall(outputs.logits.argmax(dim=1), labels).item()
-                total_f1 += self.f1(outputs.logits, labels).item()
-                total_mcc += self.mcc(outputs.logits.argmax(dim=1), labels).item()
+                total_accuracy += self.accuracy(outputs.argmax(dim=1), labels).item()
+                total_precision += self.precision(outputs.argmax(dim=1), labels).item()
+                total_recall += self.recall(outputs.argmax(dim=1), labels).item()
+                total_f1 += self.f1(outputs, labels).item()
+                total_mcc += self.mcc(outputs.argmax(dim=1), labels).item()
 
                 # Update tqdm description with current loss and metrics
                 pbar.set_postfix(loss=total_loss / (pbar.n + 1))
@@ -157,15 +158,15 @@ class Classifier:
             pbar = tqdm(dataloader, desc="Testing")
             for batch in pbar:
                 input_ids, attention_masks, labels = [x.to(self.device) for x in batch]
-                outputs = self.model(input_ids, attention_masks=attention_masks)
+                outputs = self.model(input_ids, attention_masks)
 
                 # Update and accumulate metrics
-                aggregated_metrics['total_accuracy'] += self.accuracy(outputs.logits.argmax(dim=1), labels).item()
-                aggregated_metrics['total_precision'] += self.precision(outputs.logits.argmax(dim=1), labels).item()
-                aggregated_metrics['total_recall'] += self.recall(outputs.logits.argmax(dim=1), labels).item()
-                aggregated_metrics['total_f1'] += self.f1(outputs.logits, labels).item()
-                aggregated_metrics['total_mcc'] += self.mcc(outputs.logits.argmax(dim=1), labels).item()
-                aggregated_metrics['total_top_2_acc'] += self.top2_acc(outputs.logits, labels).item()
+                aggregated_metrics['total_accuracy'] += self.accuracy(outputs.argmax(dim=1), labels).item()
+                aggregated_metrics['total_precision'] += self.precision(outputs.argmax(dim=1), labels).item()
+                aggregated_metrics['total_recall'] += self.recall(outputs.argmax(dim=1), labels).item()
+                aggregated_metrics['total_f1'] += self.f1(outputs, labels).item()
+                aggregated_metrics['total_mcc'] += self.mcc(outputs.argmax(dim=1), labels).item()
+                aggregated_metrics['total_top_2_acc'] += self.top2_acc(outputs, labels).item()
 
                 # Update tqdm description with current metrics
                 pbar.set_postfix({
@@ -186,9 +187,9 @@ def main(mode = "full"):
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     
  
-    emotion_data_train = torch.load(r"E:\text_datasets\saved\train_emotion_no_batch.pt")
-    emotion_data_val = torch.load(r"E:\text_datasets\saved\val_emotion_no_batch.pt")
-    emotion_data_test = torch.load(r"E:\text_datasets\saved\test_emotion_no_batch.pt")
+    emotion_data_train = torch.load(r"E:\text_datasets\saved\train_emotion_no_batch_no_batch.pt")
+    emotion_data_val = torch.load(r"E:\text_datasets\saved\val_emotion_no_batch_no_batch.pt")
+    emotion_data_test = torch.load(r"E:\text_datasets\saved\test_emotion_no_batch_no_batch.pt")
     
     
 
@@ -200,10 +201,10 @@ def main(mode = "full"):
     dataloader_test = DataLoader(emotion_data_test, batch_size=256)
  
     NUM_EMOTION_LABELS = 9
-    LOG_DIR = r"D:\Users\WillR\VsCodeProjects\Natural Language Processing\tinyEmoBERT\logging"
+    LOG_DIR = r"D:\Users\WillR\VsCodeProjects\Natural Language Processing\EmoBERTv2-tiny\logging"
     
 
-    model = BertFineTuneTiny(num_tasks=1, num_labels=9)
+    model = BertFineTuneTiny(num_tasks=1, num_labels=[9])
     optimizer = torch.optim.AdamW(model.parameters(),lr =1e-5, weight_decay=1e-6)
     classifier = Classifier(model, device,  NUM_EMOTION_LABELS, LOG_DIR)
 
@@ -212,7 +213,7 @@ def main(mode = "full"):
         early_stopping = EarlyStopping(patience=25, min_delta=0.0001)  # Initialize Early Stopping
         num_epochs = 25
         for epoch in range(num_epochs):
-            classifier.train_step(dataloader_train, dataloader_train, optimizer, epoch)
+            classifier.train_step(dataloader_train, optimizer, epoch)
             val_loss = classifier.val_step(dataloader_val, epoch)
 
             if early_stopping.step(val_loss, classifier.model):
@@ -232,4 +233,4 @@ def main(mode = "full"):
 
 
 if __name__ == "__main__":
-    main(mode="test")  # or "train" or "test"  
+    main(mode="full")  # or "train" or "test"  
