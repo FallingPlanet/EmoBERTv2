@@ -196,12 +196,12 @@ def main(mode = "full"):
    
     
     
-    dataloader_train = DataLoader(emotion_data_train, batch_size=256, shuffle=True)
-    dataloader_val = DataLoader(emotion_data_val, batch_size=256)
-    dataloader_test = DataLoader(emotion_data_test, batch_size=256)
+    dataloader_train = DataLoader(emotion_data_train, batch_size=512, shuffle=True)
+    dataloader_val = DataLoader(emotion_data_val, batch_size=512)
+    dataloader_test = DataLoader(emotion_data_test, batch_size=512)
  
     NUM_EMOTION_LABELS = 9
-    LOG_DIR = r"D:\Users\WillR\VsCodeProjects\Natural Language Processing\EmoBERTv2-tiny\logging"
+    LOG_DIR = r"EmoBERTv2-tiny\logging"
     
 
     model = BertFineTuneTiny(num_tasks=1, num_labels=[9])
@@ -210,8 +210,8 @@ def main(mode = "full"):
 
     if mode in ["train", "full"]:
         # Your training logic here
-        early_stopping = EarlyStopping(patience=25, min_delta=0.0001)  # Initialize Early Stopping
-        num_epochs = 25
+        early_stopping = EarlyStopping(patience=50, min_delta=1e-8)  # Initialize Early Stopping
+        num_epochs = 75
         for epoch in range(num_epochs):
             classifier.train_step(dataloader_train, optimizer, epoch)
             val_loss = classifier.val_step(dataloader_val, epoch)
