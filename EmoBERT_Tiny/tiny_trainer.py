@@ -1,6 +1,4 @@
 # Standard library imports (if any)
-import sys
-sys.path.append(r'D:\Users\WillR\VsCodeProjects\Natural Language Processing\LowLatencyTCES\tinyEmoBERT')
 import os
 # Third-party library imports
 import torch
